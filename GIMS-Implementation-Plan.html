@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIMS - Implementation Plan v2.0</title>
+<style>
+  :root {
+    --brand: #1a56db;
+    --brand-light: #e8effc;
+    --brand-dark: #0f3a94;
+    --green: #059669;
+    --green-light: #d1fae5;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --sidebar-w: 280px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; font-size: 15px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--gray-800);
+    line-height: 1.65;
+    background: var(--gray-50);
+  }
+  /* ---- SIDEBAR NAV ---- */
+  .sidebar {
+    position: fixed; top:0; left:0; width: var(--sidebar-w); height:100vh;
+    background: var(--gray-900); color: #fff; overflow-y:auto;
+    padding: 24px 0; z-index: 100;
+    scrollbar-width: thin; scrollbar-color: var(--gray-600) transparent;
+  }
+  .sidebar::-webkit-scrollbar { width:6px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--gray-600); border-radius:3px; }
+  .sidebar .logo { padding: 0 20px 20px; border-bottom: 1px solid var(--gray-700); margin-bottom: 16px; }
+  .sidebar .logo h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: .5px; }
+  .sidebar .logo .tag { display:inline-block; font-size:.65rem; background:var(--brand); color:#fff; padding:2px 8px; border-radius:10px; margin-top:6px; font-weight:600; }
+  .sidebar nav a {
+    display:block; padding: 7px 20px 7px 24px; color: var(--gray-400); text-decoration:none;
+    font-size: .82rem; transition: all .15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar nav a:hover { color:#fff; background: rgba(255,255,255,.05); }
+  .sidebar nav a.active { color:#fff; border-left-color: var(--brand); background: rgba(255,255,255,.07); font-weight:600; }
+  .sidebar nav .section-label {
+    font-size: .65rem; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--gray-500); padding: 18px 20px 6px 24px; font-weight: 600;
+  }
+  /* ---- MAIN ---- */
+  .main { margin-left: var(--sidebar-w); min-height:100vh; }
+  .hero {
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 50%, #3b82f6 100%);
+    color: #fff; padding: 60px 56px 48px; position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content:''; position:absolute; right:-80px; top:-80px; width:350px; height:350px;
+    border-radius:50%; background: rgba(255,255,255,.06);
+  }
+  .hero h1 { font-size: 2.3rem; font-weight: 800; letter-spacing: -.5px; margin-bottom:8px; }
+  .hero .subtitle { font-size: 1.05rem; opacity:.85; max-width:640px; line-height:1.6; }
+  .hero .meta { margin-top: 20px; display:flex; gap:24px; font-size:.82rem; opacity:.7; }
+  .hero .meta span { display:flex; align-items:center; gap:6px; }
+  .content { max-width: 960px; margin: 0 auto; padding: 40px 56px 80px; }
+  /* ---- SECTIONS ---- */
+  .section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  .section > h2 {
+    font-size: 1.55rem; font-weight: 700; color: var(--gray-900);
+    border-bottom: 3px solid var(--brand); padding-bottom: 8px; margin-bottom: 24px;
+  }
+  h3 { font-size: 1.15rem; font-weight: 700; color: var(--gray-800); margin: 28px 0 12px; }
+  h4 { font-size: .95rem; font-weight: 700; color: var(--gray-700); margin: 20px 0 8px; }
+  p { margin-bottom: 12px; }
+  ul, ol { margin: 0 0 14px 20px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: .85em; background: var(--gray-100); padding: 2px 6px; border-radius: 4px;
+    color: var(--brand-dark);
+  }
+  pre {
+    background: var(--gray-900); color: #e5e7eb; padding: 20px 24px;
+    border-radius: 8px; overflow-x: auto; font-size: .82rem; line-height: 1.6;
+    margin: 16px 0 20px; font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  pre code { background: none; padding:0; color: inherit; font-size: inherit; }
+  /* ---- TABLES ---- */
+  table {
+    width:100%; border-collapse:collapse; margin: 16px 0 20px;
+    font-size: .88rem;
+  }
+  th {
+    background: var(--gray-100); text-align:left; padding: 10px 14px;
+    font-weight: 700; color: var(--gray-700); border-bottom: 2px solid var(--gray-300);
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .5px;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--gray-200); vertical-align:top; }
+  tr:hover td { background: var(--gray-50); }
+  /* ---- CALLOUT BOXES ---- */
+  .callout {
+    border-radius: 8px; padding: 16px 20px; margin: 16px 0 20px;
+    font-size: .9rem;
+  }
+  .callout.vision { background: var(--brand-light); border-left: 4px solid var(--brand); }
+  .callout.success { background: var(--green-light); border-left: 4px solid var(--green); }
+  .callout.warn { background: var(--amber-light); border-left: 4px solid var(--amber); }
+  .callout.danger { background: var(--red-light); border-left: 4px solid var(--red); }
+  .callout.info { background: var(--purple-light); border-left: 4px solid var(--purple); }
+  .callout .callout-title { font-weight: 700; margin-bottom: 6px; }
+  /* ---- CHIPS / BADGES ---- */
+  .chip {
+    display:inline-block; font-size:.72rem; padding:2px 10px; border-radius:12px;
+    font-weight:600; letter-spacing:.3px;
+  }
+  .chip.green { background:var(--green-light); color:var(--green); }
+  .chip.amber { background:var(--amber-light); color:var(--amber); }
+  .chip.red { background:var(--red-light); color:var(--red); }
+  .chip.blue { background:var(--brand-light); color:var(--brand); }
+  .chip.purple { background:var(--purple-light); color:var(--purple); }
+  /* ---- DESIGN PRINCIPLES ---- */
+  .principles { display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin:16px 0 24px; }
+  .principle {
+    background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:16px;
+    border-left: 4px solid var(--brand);
+  }
+  .principle .num { font-size:.7rem; color:var(--brand); font-weight:700; margin-bottom:4px; }
+  .principle .title { font-weight:700; font-size:.9rem; margin-bottom:4px; }
+  .principle .desc { font-size:.82rem; color:var(--gray-600); }
+  /* ---- WIZARD STEPS ---- */
+  .wizard { display:flex; gap:0; margin: 20px 0 24px; }
+  .wizard-step {
+    flex:1; text-align:center; padding:12px 8px; background:var(--gray-100);
+    border:1px solid var(--gray-200); font-size:.78rem; font-weight:600; color:var(--gray-500);
+    position:relative;
+  }
+  .wizard-step:first-child { border-radius: 8px 0 0 8px; }
+  .wizard-step:last-child { border-radius: 0 8px 8px 0; }
+  .wizard-step.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .wizard-step .step-num {
+    display:block; font-size:.65rem; margin-bottom:2px; opacity:.7;
+  }
+  /* ---- RESPONSE TYPE CARDS ---- */
+  .response-types { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin:16px 0 24px; }
+  .rt-card {
+    background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:14px;
+    text-align:center;
+  }
+  .rt-card .rt-icon { font-size:1.8rem; margin-bottom:6px; }
+  .rt-card .rt-name { font-weight:700; font-size:.85rem; margin-bottom:4px; }
+  .rt-card .rt-desc { font-size:.75rem; color:var(--gray-500); }
+  /* ---- TIER CARDS ---- */
+  .tier-cards { display:flex; flex-direction:column; gap:0; margin: 20px 0; }
+  .tier-card {
+    padding: 20px 24px; border: 2px solid; border-radius: 0; position:relative;
+  }
+  .tier-card:first-child { border-radius: 10px 10px 0 0; }
+  .tier-card:last-child { border-radius: 0 0 10px 10px; }
+  .tier-card.t1 { border-color: var(--brand); background: var(--brand-light); }
+  .tier-card.t2 { border-color: var(--amber); background: var(--amber-light); }
+  .tier-card.t3 { border-color: var(--red); background: var(--red-light); }
+  .tier-card .tier-label { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .tier-card.t1 .tier-label { color: var(--brand); }
+  .tier-card.t2 .tier-label { color: var(--amber); }
+  .tier-card.t3 .tier-label { color: var(--red); }
+  .tier-card .tier-title { font-weight:700; font-size:1rem; margin-bottom:6px; }
+  .tier-card ul { font-size:.88rem; margin-left:18px; }
+  .tier-card .tier-condition {
+    margin-top:10px; font-size:.8rem; font-weight:600; padding:6px 12px;
+    border-radius:6px; display:inline-block;
+  }
+  .tier-card.t1 .tier-condition { background:rgba(26,86,219,.1); color:var(--brand); }
+  .tier-card.t2 .tier-condition { background:rgba(217,119,6,.1); color:var(--amber); }
+  .tier-card.t3 .tier-condition { background:rgba(220,38,38,.1); color:var(--red); }
+  .tier-arrow {
+    text-align:center; padding:4px 0; font-size:1.3rem; color:var(--gray-400);
+  }
+  /* ---- DIAGRAM ---- */
+  .diagram-wrap {
+    margin: 24px 0; border: 1px solid var(--gray-200); border-radius: 10px;
+    background: #fff; padding: 24px; overflow-x: auto;
+  }
+  .diagram-wrap .diagram-title {
+    font-size: .75rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gray-500); font-weight: 700; margin-bottom: 16px;
+  }
+  /* ---- COLLAPSIBLE ---- */
+  details { margin: 12px 0; }
+  details summary {
+    cursor:pointer; font-weight:700; font-size:.9rem; padding:10px 14px;
+    background: var(--gray-100); border-radius:6px; color:var(--gray-700);
+    list-style: none; display:flex; align-items:center; gap:8px;
+  }
+  details summary::before { content:'\25B6'; font-size:.65rem; transition: transform .2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details summary::-webkit-details-marker { display:none; }
+  details .details-content { padding: 14px; border: 1px solid var(--gray-200); border-top:none; border-radius: 0 0 6px 6px; }
+  /* ---- PHASE HEADER ---- */
+  .phase-header {
+    background: #fff; border: 1px solid var(--gray-200); border-radius: 10px;
+    padding: 20px 24px; margin: 20px 0 24px; display:flex; align-items:center; gap:20px;
+  }
+  .phase-header .phase-num {
+    font-size: 2rem; font-weight: 800; color: var(--brand); line-height:1;
+  }
+  .phase-header .phase-info { flex:1; }
+  .phase-header .phase-info .phase-title { font-weight:700; font-size:1.1rem; margin-bottom:4px; }
+  .phase-header .phase-info .phase-meta { font-size:.82rem; color:var(--gray-500); display:flex; gap:16px; }
+  .phase-header .phase-info .phase-meta span { display:flex; align-items:center; gap:4px; }
+  /* ---- CHECKBOX LIST ---- */
+  .acceptance-criteria { list-style:none; margin-left:0; padding-left:0; }
+  .acceptance-criteria li {
+    padding: 6px 0 6px 28px; position:relative; font-size:.88rem;
+  }
+  .acceptance-criteria li::before {
+    content:''; position:absolute; left:0; top:9px;
+    width:16px; height:16px; border:2px solid var(--gray-300); border-radius:3px;
+    background:#fff;
+  }
+  /* ---- STEP CARD ---- */
+  .step-card {
+    background: #fff; border: 1px solid var(--gray-200); border-radius: 8px;
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .step-card > h4:first-child {
+    margin-top:0; font-size:1rem; color:var(--brand-dark);
+  }
+  /* ---- PRINT ---- */
+  @media print {
+    .sidebar { display:none; }
+    .main { margin-left:0; }
+    .hero { padding:30px; }
+    .content { padding:20px; }
+    pre { white-space: pre-wrap; }
+    .diagram-wrap { break-inside: avoid; }
+    .no-print { display:none; }
+  }
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 1024px) {
+    .sidebar { display:none; }
+    .main { margin-left:0; }
+    .content { padding: 24px; }
+    .hero { padding: 36px 24px; }
+    .principles { grid-template-columns: 1fr; }
+    .response-types { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== SIDEBAR ======== -->
+<aside class="sidebar no-print">
+  <div class="logo">
+    <h2>GIMS</h2>
+    <div>Implementation Plan</div>
+    <span class="tag">v2.0</span>
+  </div>
+  <nav>
+    <div class="section-label">Overview</div>
+    <a href="#executive-summary">1. Executive Summary</a>
+    <a href="#architecture">2. Architecture Overview</a>
+    <a href="#repo-map">3. Repo Map</a>
+    <a href="#principles">4. Guiding Principles</a>
+
+    <div class="section-label">Phase 1 &mdash; Foundation</div>
+    <a href="#phase-1">5. Phase 1 Overview</a>
+    <a href="#step-1-1">1.1 MongoDB Models</a>
+    <a href="#step-1-2">1.2 Campaign CRUD</a>
+    <a href="#step-1-3">1.3 Campaign Execution</a>
+    <a href="#step-1-4">1.4 Student Inbox APIs</a>
+    <a href="#step-1-5">1.5 Bridge-Universe Endpoints</a>
+    <a href="#step-1-6">1.6 GIMS API Client</a>
+    <a href="#step-1-7">1.7 Comms Page</a>
+    <a href="#step-1-8">1.8 Campaign Wizard</a>
+    <a href="#step-1-9">1.9 Campaign Detail</a>
+    <a href="#step-1-10">1.10 Student /comms Pages</a>
+
+    <div class="section-label">Phase 2 &mdash; Cascade</div>
+    <a href="#phase-2">6. Phase 2 Overview</a>
+    <a href="#step-2-1">2.1 Cascade Processor</a>
+    <a href="#step-2-2">2.2 Tier 1 Notification</a>
+    <a href="#step-2-3">2.3 Webhook Integration</a>
+    <a href="#step-2-4">2.4 Console Updates</a>
+    <a href="#step-2-5">2.5 Scheduled Messages</a>
+
+    <div class="section-label">Phase 3 &mdash; Events</div>
+    <a href="#phase-3">7. Phase 3 Overview</a>
+    <a href="#step-3-1">3.1 EventPublisher</a>
+    <a href="#step-3-2">3.2 Instrument Events</a>
+    <a href="#step-3-3">3.3 Event Processor</a>
+    <a href="#step-3-4">3.4 Template CRUD</a>
+    <a href="#step-3-5">3.5 Console Tabs</a>
+    <a href="#step-3-6">3.6 Placeholder Engine</a>
+
+    <div class="section-label">Phase 4 &mdash; Chatbot</div>
+    <a href="#phase-4">8. Phase 4 Overview</a>
+
+    <div class="section-label">Phase 5 &mdash; Consolidation</div>
+    <a href="#phase-5">9. Phase 5 Overview</a>
+
+    <div class="section-label">Phase 6 &mdash; IDEAL</div>
+    <a href="#phase-6">10. Phase 6 Overview</a>
+
+    <div class="section-label">Cross-Cutting</div>
+    <a href="#cross-cutting">11. Cross-Cutting Concerns</a>
+    <a href="#timeline">12. Timeline Summary</a>
+  </nav>
+</aside>
+
+<!-- ======== MAIN ======== -->
+<div class="main">
+
+  <!-- HERO -->
+  <header class="hero">
+    <h1>GIMS Implementation Plan</h1>
+    <div class="subtitle">
+      Gradesmatch Integrated Messaging System &mdash; a phased implementation roadmap for building
+      unified student communications with delivery cascade, event-driven messaging, and an AI chatbot.
+    </div>
+    <div class="meta">
+      <span>Version: <strong>2.0</strong></span>
+      <span>Date: <strong>2026-04-09</strong></span>
+      <span>Status: <strong>Approved</strong></span>
+      <span>Spec: <strong>GIMS IDEAL Specification</strong></span>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ============================================================ -->
+    <!-- SECTION 1: EXECUTIVE SUMMARY -->
+    <!-- ============================================================ -->
+    <div class="section" id="executive-summary">
+      <h2>1. Executive Summary</h2>
+
+      <p>GIMS replaces the current fragmented communication approach &mdash; where WhatsApp, email, SMS, and in-app notifications operate independently &mdash; with a single unified messaging platform.</p>
+
+      <div class="callout vision">
+        <div class="callout-title">What GIMS Delivers</div>
+        <ul>
+          <li>A <strong>3-tier delivery cascade</strong> (App &rarr; WhatsApp &rarr; SMS) with per-message tracking</li>
+          <li><strong>Structured response collection</strong> (yes/no, select, rating, text, file upload, etc.)</li>
+          <li><strong>Event-driven auto-messaging</strong> triggered by business actions (no code changes for new messages)</li>
+          <li>A single <strong>unified AI chatbot</strong> replacing 4 fragmented bots</li>
+          <li><strong>Full analytics dashboard</strong> measuring app engagement vs WhatsApp dependency</li>
+          <li><strong>Campaign authoring</strong> with multi-channel content and audience targeting</li>
+        </ul>
+      </div>
+
+      <div class="callout success">
+        <div class="callout-title">What Already Exists</div>
+        <ul>
+          <li><code>gims-api</code> repo with Azure Functions scaffolding, MongoDB client, BridgeService base class, all collection constants, blob storage, email sender</li>
+          <li>WhatsApp sending via <code>WhatsappSend.SendWhatsapp()</code> in bridge-universe</li>
+          <li>SMS sending via <code>SMS.BulkSend()</code> in bridge-universe</li>
+          <li>Email sending via <code>Mail.SendEmail()</code> in bridge-universe</li>
+          <li>Campaign polling pattern via <code>CampaignListener.cs</code> in bridge-universe</li>
+          <li>Meta webhook handler in <code>azf-gradesmatch-identity/metaWebhook.cs</code></li>
+          <li>Notification prototypes in gradesmatchid and bridge-one-3</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 2: ARCHITECTURE OVERVIEW -->
+    <!-- ============================================================ -->
+    <div class="section" id="architecture">
+      <h2>2. Architecture Overview</h2>
+
+      <div class="diagram-wrap">
+        <div class="diagram-title">GIMS System Architecture</div>
+        <pre><code>&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;               ADMIN LAYER &mdash; bridge-console              &#9474;
+&#9474;  /{workspace}/comms (Campaigns, Events, Templates,      &#9474;
+&#9474;   Analytics) &bull; Student Profile &gt; Messages &bull; Settings    &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+                      &#9474; REST API (JWT)
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;              GIMS API LAYER &mdash; gims-api                   &#9474;
+&#9474;  (Azure Functions v4, .NET 8, MongoDB)                  &#9474;
+&#9474;                                                          &#9474;
+&#9474;  GimsService          GimsChatService    EventPublisher  &#9474;
+&#9474;  Campaign CRUD        Chat (2-hit LLM)   Publish()      &#9474;
+&#9474;  Event Templates      Conversations      (called from   &#9474;
+&#9474;  Student Inbox        Escalation          any backend)   &#9474;
+&#9474;  Responses            FAQ                                &#9474;
+&#9474;  Analytics                                               &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+       &#9474;                              &#9474;
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;    &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474; DELIVERY LAYER  &#9474;    &#9474;    EVENT PROCESSING LAYER        &#9474;
+&#9474; Cascade         &#9474;    &#9474;    Event Processor               &#9474;
+&#9474; Processor       &#9474;    &#9474;    (poll events, match templates, &#9474;
+&#9474; (Console App)   &#9474;    &#9474;     create messages)              &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;    &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+       &#9474; Calls existing infrastructure (NO direct Meta API)
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;  EXISTING INFRASTRUCTURE (bridge-universe)              &#9474;
+&#9474;  WhatsappSend.SendWhatsapp() &bull; SMS.BulkSend()           &#9474;
+&#9474;  Mail.SendEmail() &bull; GmBucket (blob storage)             &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+       &#9474;
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;  STUDENT LAYER &mdash; ALL apps get /comms from Phase 1       &#9474;
+&#9474;  gradesmatch_2026 (Next.js) &bull; bridge-one-3 (Vite+React) &#9474;
+&#9474;  gradesmatchid (Vite+React) &bull; futuristic (Vite+React)   &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</code></pre>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 3: REPO MAP -->
+    <!-- ============================================================ -->
+    <div class="section" id="repo-map">
+      <h2>3. Repo Map &amp; Integration Points</h2>
+
+      <h3>Backend Repos</h3>
+      <table>
+        <thead>
+          <tr><th>Repo</th><th>Role in GIMS</th><th>What We Build</th><th>What We Reuse</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>gims-api</strong></td>
+            <td>Primary GIMS backend</td>
+            <td>All GIMS services, models, triggers, cascade processor, event processor</td>
+            <td>Existing scaffolding: BridgeService, MongoCollections, GmBucket, EmailSender, SingleMongoClient</td>
+          </tr>
+          <tr>
+            <td><strong>bridge-universe</strong></td>
+            <td>Existing messaging infra</td>
+            <td><code>EventPublisher.Publish()</code> calls at business event points + thin HTTP wrappers for WA/SMS sending</td>
+            <td><code>WhatsappSend.SendWhatsapp()</code>, <code>SMS.BulkSend()</code>, <code>Mail.SendEmail()</code>, CampaignListener polling pattern</td>
+          </tr>
+          <tr>
+            <td><strong>azf-gradesmatch-identity</strong></td>
+            <td>Webhook handler</td>
+            <td>Add GIMS routing in existing webhook</td>
+            <td><code>metaWebhook.cs</code> webhook handler, session management</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Frontend Repos</h3>
+      <table>
+        <thead>
+          <tr><th>Repo</th><th>Framework</th><th>Routing</th><th>Data Fetching</th><th>What We Build</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>bridge-console</strong></td>
+            <td>Vite + React 19 + RR v6</td>
+            <td>Programmatic <code>routes.tsx</code></td>
+            <td>Axios + TanStack Query</td>
+            <td>Comms page (4 tabs), creation wizard, analytics</td>
+          </tr>
+          <tr>
+            <td><strong>gradesmatch_2026</strong></td>
+            <td>Next.js 15 (App Router)</td>
+            <td>File-based <code>src/app/</code></td>
+            <td>Server Actions</td>
+            <td>/comms page, chat UI, unread badge</td>
+          </tr>
+          <tr>
+            <td><strong>bridge-one-3</strong></td>
+            <td>Vite + React 18 + RR v6</td>
+            <td>Programmatic <code>App.tsx</code></td>
+            <td>TanStack Query</td>
+            <td>/comms page, chat UI, unread badge</td>
+          </tr>
+          <tr>
+            <td><strong>gradesmatchid</strong></td>
+            <td>Vite + React 19 + RR v7</td>
+            <td>Programmatic <code>App.tsx</code></td>
+            <td>Fetch + localStorage</td>
+            <td>/comms page (replace mock notifications.ts), chat UI</td>
+          </tr>
+          <tr>
+            <td><strong>futuristic</strong></td>
+            <td>Vite + React 19 + RR v7</td>
+            <td>Programmatic <code>App.tsx</code></td>
+            <td>TanStack Query</td>
+            <td>/comms page, chat UI, unread badge</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Databases</h3>
+      <table>
+        <thead>
+          <tr><th>Database</th><th>Access</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>gradesmatch_gims</code></td><td><span class="chip green">Read/Write (new)</span></td><td>messages, campaigns, event_templates, message_templates, conversations, faq</td></tr>
+          <tr><td><code>gradesmatch_events</code></td><td><span class="chip green">Read/Write (new)</span></td><td>Business event store (TTL 90 days)</td></tr>
+          <tr><td><code>gradesmatch_core</code></td><td><span class="chip blue">Read-only</span></td><td>User profiles, applications, institutions</td></tr>
+          <tr><td><code>gradesmatch_social</code></td><td><span class="chip blue">Read-only</span></td><td>WhatsApp queue/messages/sessions (for delivery tracking)</td></tr>
+          <tr><td><code>gradesmatch_settings</code></td><td><span class="chip blue">Read-only</span></td><td>Partners, email settings</td></tr>
+          <tr><td><code>gradesmail</code></td><td><span class="chip blue">Read-only</span></td><td>GradesMail messages (for chatbot context)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 4: GUIDING PRINCIPLES -->
+    <!-- ============================================================ -->
+    <div class="section" id="principles">
+      <h2>4. Guiding Principles</h2>
+
+      <div class="principles">
+        <div class="principle">
+          <div class="num">PRINCIPLE 01</div>
+          <div class="title">No Data Migration</div>
+          <div class="desc">Legacy campaign data stays in <code>gradesmatch_social.whatsapp_campaign</code>. GIMS writes to its own collections. Both systems coexist until legacy is retired.</div>
+        </div>
+        <div class="principle">
+          <div class="num">PRINCIPLE 02</div>
+          <div class="title">No Direct External API Calls</div>
+          <div class="desc">All external channel sending goes through bridge-universe's existing <code>WhatsappSend</code>, <code>SMS.BulkSend()</code>, and <code>Mail.SendEmail()</code>. GIMS calls these via HTTP endpoints.</div>
+        </div>
+        <div class="principle">
+          <div class="num">PRINCIPLE 03</div>
+          <div class="title">All Apps from Phase 1</div>
+          <div class="desc">Not just gradesmatch_2026 &mdash; bridge-one-3, gradesmatchid, and futuristic all get the comms page simultaneously.</div>
+        </div>
+        <div class="principle">
+          <div class="num">PRINCIPLE 04</div>
+          <div class="title">Independently Deployable Phases</div>
+          <div class="desc">Each phase is independently deployable and valuable. No phase depends on a future phase to deliver value.</div>
+        </div>
+        <div class="principle">
+          <div class="num">PRINCIPLE 05</div>
+          <div class="title">Follow Existing Patterns</div>
+          <div class="desc">BridgeService base class, BridgeServicePolicy attributes, MongoCollections constants, Service Generator API pattern, SuperTableGeneric for admin tables.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 1 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-1">
+      <h2>5. Phase 1 &mdash; Core Messaging Foundation (MVP)</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">01</div>
+        <div class="phase-info">
+          <div class="phase-title">Core Messaging Foundation</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 4&ndash;6 weeks</span>
+            <span><strong>Repos:</strong> gims-api, bridge-console, gradesmatch_2026, bridge-one-3, gradesmatchid, futuristic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout vision">
+        <div class="callout-title">Goal</div>
+        <p style="margin-bottom:0;">Admin creates campaigns in bridge-console &rarr; messages appear in ALL student app inboxes &rarr; students can view and respond &rarr; delivery stats visible to admin.</p>
+      </div>
+
+      <!-- STEP 1.1 -->
+      <div class="step-card" id="step-1-1">
+        <h4>Step 1.1 &mdash; MongoDB Models <span class="chip blue">gims-api</span></h4>
+        <p>Create C# model classes matching the spec section 7.2 schemas.</p>
+
+        <details>
+          <summary>Files to Create</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Model</th><th>Key Fields</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>Models/Message.cs</code></td>
+                  <td><code>Message</code></td>
+                  <td>messageId, sourceType, sourceId, userId, userPhone, title, appContent, whatsappContent, smsContent, attachments[], responseType, responseOptions, workspace, priority, chatbotContext, cascadeConfig, status, currentTier, cascadeComplete, finalChannel, delivery, response</td>
+                </tr>
+                <tr>
+                  <td><code>Models/Campaign.cs</code></td>
+                  <td><code>Campaign</code></td>
+                  <td>campaignId, title, workspace, audienceType, audienceFilter, audienceCsv, recipientCount, messageTitle, appContent, whatsappContent, smsContent, attachments[], responseType, responseOptions, chatbotContext, priority, cascadeConfig, deliveryType, scheduledFor, status, execution stats, createdBy, timestamps</td>
+                </tr>
+                <tr>
+                  <td><code>Models/MessageTemplate.cs</code></td>
+                  <td><code>MessageTemplate</code></td>
+                  <td>templateId, title, workspace, messageTitle, appContent, whatsappContent, smsContent, responseType, responseOptions, priority, category, tags, createdBy, timestamps</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="callout info">
+              <div class="callout-title">Pattern</div>
+              <p style="margin-bottom:0;">Use <code>[BsonId]</code> for <code>_id</code>, <code>[BsonElement("fieldName")]</code> for MongoDB mapping. Reference existing <code>Models/Common/ErrorLog.cs</code> for conventions.</p>
+            </div>
+          </div>
+        </details>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>All model classes compile and map to MongoDB documents</li>
+          <li>Enum types defined for: sourceType, responseType, priority, status, currentTier, audienceType</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1.2 -->
+      <div class="step-card" id="step-1-2">
+        <h4>Step 1.2 &mdash; Campaign CRUD APIs <span class="chip blue">gims-api</span></h4>
+        <p>Create GimsService with campaign management methods.</p>
+
+        <details>
+          <summary>Files to Create</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Class</th><th>Methods</th></tr></thead>
+              <tbody>
+                <tr><td><code>Services/GimsService.cs</code></td><td><code>GimsService : BridgeService</code></td><td>CreateCampaign, UpdateCampaign, DeleteCampaign, GetCampaigns, GetCampaignDetail</td></tr>
+                <tr><td><code>Triggers/GimsTriggers.cs</code></td><td><code>GimsTriggers</code></td><td>HTTP triggers for each GimsService method</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>Method Details</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>Method</th><th>Auth</th><th>Input</th><th>Logic</th></tr></thead>
+              <tbody>
+                <tr><td><code>CreateCampaign</code></td><td>Admin (team_lead+)</td><td>Campaign object</td><td>Validate required fields, set status=&quot;draft&quot;, insert into <code>gradesmatch_gims.campaigns</code></td></tr>
+                <tr><td><code>UpdateCampaign</code></td><td>Admin</td><td>campaignId + fields</td><td>Only updatable while status=&quot;draft&quot;. Update in-place</td></tr>
+                <tr><td><code>GetCampaigns</code></td><td>Admin</td><td>workspace, page, pageSize, status</td><td>Query campaigns filtered by workspace, paginated, sorted by createdAt desc</td></tr>
+                <tr><td><code>GetCampaignDetail</code></td><td>Admin</td><td>campaignId</td><td>Return full campaign with execution stats</td></tr>
+                <tr><td><code>DeleteCampaign</code></td><td>Admin</td><td>campaignId</td><td>Only deletable while status=&quot;draft&quot;. Soft or hard delete</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>HTTP Trigger Pattern</summary>
+          <div class="details-content">
+            <pre><code>[Function("GimsService_CreateCampaign")]
+public async Task&lt;IActionResult&gt; CreateCampaign(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)</code></pre>
+          </div>
+        </details>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>All 5 CRUD methods working via HTTP triggers</li>
+          <li>Auth enforced &mdash; only team_lead and super_admin can access</li>
+          <li>Workspace filtering applied on all queries</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1.3 -->
+      <div class="step-card" id="step-1-3">
+        <h4>Step 1.3 &mdash; Campaign Execution <span class="chip blue">gims-api</span></h4>
+        <p>Add methods to test, release, and cancel campaigns.</p>
+
+        <details>
+          <summary>Method Details</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>Method</th><th>Logic</th></tr></thead>
+              <tbody>
+                <tr><td><code>TestCampaign(campaignId, testUserIds[])</code></td><td>Create message instances for test users only. Mark campaign status=&quot;testing&quot;</td></tr>
+                <tr><td><code>ReleaseCampaign(campaignId)</code></td><td>Resolve audience from <code>gradesmatch_core.user</code> using campaign's audienceFilter (BSON query) or audienceCsv. For each recipient: resolve <code>{{placeholders}}</code> in content, create a Message document with status=&quot;delivered&quot;, currentTier=1, delivery.app.delivered=now. Update campaign status accordingly. Track execution stats.</td></tr>
+                <tr><td><code>CancelCampaign(campaignId)</code></td><td>Only if status=&quot;scheduled&quot;. Set status=&quot;cancelled&quot;</td></tr>
+                <tr><td><code>GetCampaignRecipients(campaignId, page)</code></td><td>Paginated list of message instances for this campaign with per-user delivery status</td></tr>
+                <tr><td><code>ExportCampaignResults(campaignId)</code></td><td>Return all message instances as CSV-ready data</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>Audience Resolution</summary>
+          <div class="details-content">
+            <ul>
+              <li><code>audienceType="filter"</code>: Execute the BSON filter against <code>gradesmatch_core.user</code> (same pattern as existing <code>WhatsappCampaignService.SetFilter</code>)</li>
+              <li><code>audienceType="csv"</code>: Use the uploaded CSV recipient list</li>
+              <li><code>audienceType="ai"</code>: AI-generated filter (future &mdash; use filter for now)</li>
+            </ul>
+
+            <div class="callout info">
+              <div class="callout-title">Placeholder Resolution</div>
+              <p style="margin-bottom:0;">Replace <code>{{Name}}</code>, <code>{{Email}}</code>, <code>{{Phone}}</code>, etc. from user document fields using case-insensitive regex: <code>Regex.Replace(template, @"\{\{" + key + @"\}\}", value, RegexOptions.IgnoreCase)</code></p>
+            </div>
+          </div>
+        </details>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>TestCampaign creates messages for test users only</li>
+          <li>ReleaseCampaign creates individual message documents for every recipient</li>
+          <li>Placeholder resolution works for all user fields</li>
+          <li>Campaign status transitions: draft &rarr; testing &rarr; scheduled/sending &rarr; completed</li>
+          <li>Execution stats tracked on campaign document</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1.4 -->
+      <div class="step-card" id="step-1-4">
+        <h4>Step 1.4 &mdash; Student Inbox APIs <span class="chip blue">gims-api</span></h4>
+        <p>Add student-facing endpoints for reading messages.</p>
+
+        <details>
+          <summary>Method Details</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>Method</th><th>Auth</th><th>Input</th><th>Logic</th></tr></thead>
+              <tbody>
+                <tr><td><code>GetMyMessages</code></td><td>Student (JWT)</td><td>page, pageSize, unreadOnly</td><td>Query messages WHERE userId = JWT userId, sorted by createdAt desc, paginated</td></tr>
+                <tr><td><code>GetMessageDetail</code></td><td>Student</td><td>messageId</td><td>Return full message WHERE userId = JWT userId AND _id = messageId</td></tr>
+                <tr><td><code>MarkAsRead</code></td><td>Student</td><td>messageId</td><td>Set delivery.app.read = DateTime.UtcNow, update status to &quot;read&quot;</td></tr>
+                <tr><td><code>GetUnreadCount</code></td><td>Student</td><td>&mdash;</td><td>Count messages WHERE userId = JWT userId AND delivery.app.read IS NULL</td></tr>
+                <tr><td><code>SubmitResponse</code></td><td>Student</td><td>messageId, responseValue, files[]</td><td>Validate response against responseType/responseOptions. Upload files via GmBucket. Set response and status=&quot;responded&quot;</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>MongoDB Indexes</summary>
+          <div class="details-content">
+            <pre><code>messages: { userId: 1, createdAt: -1 }
+messages: { userId: 1, "delivery.app.read": 1 }
+messages: { sourceType: 1, sourceId: 1 }
+messages: { status: 1, currentTier: 1, cascadeComplete: 1 }
+messages: { workspace: 1, createdAt: -1 }
+campaigns: { workspace: 1, createdAt: -1 }
+campaigns: { status: 1 }</code></pre>
+          </div>
+        </details>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>All student endpoints filter by JWT userId</li>
+          <li>MarkAsRead updates delivery tracking correctly</li>
+          <li>SubmitResponse validates response type</li>
+          <li>File uploads stored in Azure Blob via GmBucket</li>
+          <li>All indexes created</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1.5 -->
+      <div class="step-card" id="step-1-5">
+        <h4>Step 1.5 &mdash; Bridge-Universe Messaging Endpoints <span class="chip amber">bridge-universe</span></h4>
+        <p>Expose existing WhatsApp/SMS sending as HTTP endpoints for gims-api to call.</p>
+
+        <details>
+          <summary>Endpoints</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File to Create</th><th>Endpoint</th><th>Wraps</th></tr></thead>
+              <tbody>
+                <tr><td><code>Triggers/GimsWhatsappTrigger.cs</code></td><td><code>POST /api/gims/send-whatsapp</code></td><td><code>WhatsappSend.SendWhatsapp()</code></td></tr>
+                <tr><td><code>Triggers/GimsSmsTrigger.cs</code></td><td><code>POST /api/gims/send-sms</code></td><td><code>SMS.BulkSend()</code></td></tr>
+              </tbody>
+            </table>
+
+            <div class="callout warn">
+              <div class="callout-title">Thin wrappers only</div>
+              <p style="margin-bottom:0;">Accept JSON body (phone, message, name, attachments), call existing static methods. No Meta API changes.</p>
+            </div>
+
+            <pre><code>{
+  "phone": "+27...",
+  "whatsapp": "+27...",
+  "message": "Your message text",
+  "name": "Student Name",
+  "attachments": ["fileId1"],
+  "campaignId": "gims_campaign_123"
+}</code></pre>
+          </div>
+        </details>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>gims-api can send WhatsApp via bridge-universe endpoint</li>
+          <li>gims-api can send SMS via bridge-universe endpoint</li>
+          <li>Existing 24h session window logic preserved</li>
+          <li>No direct Meta/BulkSMS API calls from gims-api</li>
+        </ul>
+      </div>
+
+      <!-- STEP 1.6 -->
+      <div class="step-card" id="step-1-6">
+        <h4>Step 1.6 &mdash; GIMS API Client <span class="chip purple">bridge-console</span></h4>
+
+        <details>
+          <summary>Files</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/shared/api/gimsApi.ts</code></td><td>Axios instance with <code>VITE_GIMS_API_URL</code>, JWT interceptor (same pattern as <code>client.ts</code>), 401/403 handling. Typed functions for all GIMS endpoints</td></tr>
+                <tr><td><code>.env</code> update</td><td><code>VITE_GIMS_API_URL=https://{env}gims-api.azurewebsites.net/api</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 1.7 -->
+      <div class="step-card" id="step-1-7">
+        <h4>Step 1.7 &mdash; Comms Page <span class="chip purple">bridge-console</span></h4>
+
+        <details>
+          <summary>Files</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/app/pages/CommsPage.tsx</code></td><td>4-tab layout: Campaigns (active), Events / Templates / Analytics (&quot;Coming soon&quot;). Route: <code>/{workspace}/comms</code></td></tr>
+                <tr><td><code>src/app/routes.tsx</code> (edit)</td><td>Add comms route inside each workspace group</td></tr>
+                <tr><td><code>src/app/components/Sidebar.tsx</code> (edit)</td><td>Add &quot;Comms&quot; nav item with MessageSquare icon under each workspace</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <div class="callout info">
+          <div class="callout-title">Campaigns Tab</div>
+          <p style="margin-bottom:0;">SuperTableGeneric &mdash; Title, Status badge, Audience count, Response Type, Channels icons, Delivery progress bar, Created date. <strong>[+ New Campaign]</strong> button.</p>
+        </div>
+      </div>
+
+      <!-- STEP 1.8 -->
+      <div class="step-card" id="step-1-8">
+        <h4>Step 1.8 &mdash; Campaign Creation Wizard <span class="chip purple">bridge-console</span></h4>
+
+        <p>6-step form using shadcn Dialog + react-hook-form + zod.</p>
+
+        <div class="wizard">
+          <div class="wizard-step active"><span class="step-num">Step 1</span>Type &amp; Basics</div>
+          <div class="wizard-step"><span class="step-num">Step 2</span>Audience</div>
+          <div class="wizard-step"><span class="step-num">Step 3</span>Content</div>
+          <div class="wizard-step"><span class="step-num">Step 4</span>Response</div>
+          <div class="wizard-step"><span class="step-num">Step 5</span>Chatbot</div>
+          <div class="wizard-step"><span class="step-num">Step 6</span>Review</div>
+        </div>
+
+        <details>
+          <summary>Step Details</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>Step</th><th>Title</th><th>Fields</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Type &amp; Basics</td><td>Type (Campaign), Title, Workspace, Priority, Response Type</td></tr>
+                <tr><td>2</td><td>Audience</td><td>Filter Builder OR CSV Upload. Recipient count preview</td></tr>
+                <tr><td>3</td><td>Message Content</td><td>App (tiptap rich text, required), WhatsApp (plain text + auto-generate), SMS (160-char counter, optional)</td></tr>
+                <tr><td>4</td><td>Response Config</td><td>Conditional per response type: labels, options, file types, multi-step composer</td></tr>
+                <tr><td>5</td><td>Chatbot Context</td><td>Optional context textarea</td></tr>
+                <tr><td>6</td><td>Schedule &amp; Review</td><td>Immediate/scheduled, cascade timeouts, preview, test, send</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 1.9 -->
+      <div class="step-card" id="step-1-9">
+        <h4>Step 1.9 &mdash; Campaign Detail View <span class="chip purple">bridge-console</span></h4>
+
+        <details>
+          <summary>File</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/app/pages/components/CampaignDetail.tsx</code></td><td>Header + stats cards + message preview + recipient table (SuperTableGeneric) + action timeline</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 1.10 -->
+      <div class="step-card" id="step-1-10">
+        <h4>Step 1.10 &mdash; Student /comms Pages <span class="chip green">ALL frontend apps</span></h4>
+
+        <details>
+          <summary>gradesmatch_2026 (Next.js App Router)</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/app/(main)/comms/page.tsx</code></td><td>File-based route &rarr; <code>/comms</code></td></tr>
+                <tr><td><code>src/app/(main)/comms/[messageId]/page.tsx</code></td><td>Message detail</td></tr>
+                <tr><td><code>src/actions/GimsService.ts</code></td><td>Server actions with <code>'use server'</code></td></tr>
+                <tr><td><code>src/components/topNav/topNav.tsx</code> (edit)</td><td>Add &quot;Comms&quot; nav item</td></tr>
+                <tr><td><code>src/components/bottomNav/bottomNav.tsx</code> (edit)</td><td>Add &quot;Comms&quot; for mobile</td></tr>
+                <tr><td><code>src/components/comms/</code></td><td>MessageList, MessageDetail, ResponseUI</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>bridge-one-3 (Vite + React Router v6)</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/pages/main/CommsPage.tsx</code></td><td>Comms inbox</td></tr>
+                <tr><td><code>src/pages/main/MessageDetailPage.tsx</code></td><td>Message detail</td></tr>
+                <tr><td><code>src/services/gimsService.ts</code></td><td>React Query hooks</td></tr>
+                <tr><td><code>src/App.tsx</code> (edit)</td><td>Add <code>/comms</code> routes inside MainLayout</td></tr>
+                <tr><td><code>src/components/sideNav/sidenav.tsx</code> (edit)</td><td>Add &quot;Comms&quot; + unread badge</td></tr>
+                <tr><td><code>src/components/comms/</code></td><td>MessageList, MessageDetail, ResponseUI</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>gradesmatchid (Vite + React Router v7 &mdash; mobile-first)</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/pages/Comms.tsx</code></td><td>Mobile-first inbox (max-width 448px)</td></tr>
+                <tr><td><code>src/pages/CommsDetail.tsx</code></td><td>Message detail</td></tr>
+                <tr><td><code>src/api/gimsApi.ts</code></td><td>Fetch-based (no React Query)</td></tr>
+                <tr><td><code>src/App.tsx</code> (edit)</td><td>Add routes inside <code>&lt;ProtectedRoute&gt;</code></td></tr>
+                <tr><td><code>src/api/notifications.ts</code> (edit)</td><td>Replace MOCK_MESSAGES with real API</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>futuristic (Vite + React Router v7 + AppShell)</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>src/routes/comms/Comms.tsx</code></td><td>Wrapped in <code>&lt;AppShell&gt;</code></td></tr>
+                <tr><td><code>src/routes/comms/CommsDetail.tsx</code></td><td>Message detail</td></tr>
+                <tr><td><code>src/api/gimsApi.ts</code></td><td>React Query hooks</td></tr>
+                <tr><td><code>src/App.tsx</code> (edit)</td><td>Add routes inside <code>&lt;OnboardedRoute&gt;</code></td></tr>
+                <tr><td><code>src/components/layout/DesktopSidebar.tsx</code> (edit)</td><td>Add &quot;Comms&quot; + badge</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <h4>Response UI (all apps)</h4>
+        <div class="response-types">
+          <div class="rt-card"><div class="rt-name">none</div><div class="rt-desc">Read-only &mdash; Read receipt</div></div>
+          <div class="rt-card"><div class="rt-name">acknowledge</div><div class="rt-desc">&quot;I understand&quot; button</div></div>
+          <div class="rt-card"><div class="rt-name">yes_no</div><div class="rt-desc">Two buttons &mdash; Boolean</div></div>
+          <div class="rt-card"><div class="rt-name">select</div><div class="rt-desc">Radio/checkboxes</div></div>
+          <div class="rt-card"><div class="rt-name">rating</div><div class="rt-desc">1&ndash;5 stars</div></div>
+          <div class="rt-card"><div class="rt-name">text</div><div class="rt-desc">Text input + submit</div></div>
+          <div class="rt-card"><div class="rt-name">upload</div><div class="rt-desc">File picker</div></div>
+          <div class="rt-card"><div class="rt-name">url</div><div class="rt-desc">Action button &mdash; click tracking</div></div>
+          <div class="rt-card"><div class="rt-name">multi</div><div class="rt-desc">Sequential steps &mdash; array</div></div>
+        </div>
+
+        <h4>Acceptance Criteria</h4>
+        <ul class="acceptance-criteria">
+          <li>/comms works in ALL 4 student apps</li>
+          <li>Unread indicator, priority badge, workspace label on messages</li>
+          <li>MarkAsRead on message open</li>
+          <li>All 9 response types render and submit</li>
+          <li>Unread badge in navigation (polls every 60s)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 2 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-2">
+      <h2>6. Phase 2 &mdash; Delivery Cascade &amp; Channel Integration</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">02</div>
+        <div class="phase-info">
+          <div class="phase-title">Delivery Cascade &amp; Channel Integration</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 3&ndash;4 weeks</span>
+            <span><strong>Repos:</strong> gims-api, bridge-universe, azf-gradesmatch-identity, bridge-console</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout vision">
+        <div class="callout-title">Goal</div>
+        <p style="margin-bottom:0;">Messages cascade App &rarr; WhatsApp &rarr; SMS with per-message tracking.</p>
+      </div>
+
+      <h3>Delivery Cascade Tiers</h3>
+
+      <div class="tier-cards">
+        <div class="tier-card t1">
+          <div class="tier-label">Tier 1 &mdash; In-App</div>
+          <div class="tier-title">App Notification</div>
+          <ul>
+            <li>Message delivered to student inbox in all apps</li>
+            <li>Free, rich content, structured responses</li>
+          </ul>
+          <div class="tier-condition">If not read within timeout &rarr; escalate to Tier 2</div>
+        </div>
+        <div class="tier-arrow">&darr;</div>
+        <div class="tier-card t2">
+          <div class="tier-label">Tier 2 &mdash; WhatsApp</div>
+          <div class="tier-title">WhatsApp Message</div>
+          <ul>
+            <li>Sent via bridge-universe <code>WhatsappSend.SendWhatsapp()</code></li>
+            <li>Familiar channel, high open rate, 24h session window</li>
+          </ul>
+          <div class="tier-condition">If not delivered/read within timeout &rarr; escalate to Tier 3</div>
+        </div>
+        <div class="tier-arrow">&darr;</div>
+        <div class="tier-card t3">
+          <div class="tier-label">Tier 3 &mdash; SMS</div>
+          <div class="tier-title">SMS Fallback</div>
+          <ul>
+            <li>Sent via bridge-universe <code>SMS.BulkSend()</code></li>
+            <li>Last resort, highest reach, cost per message</li>
+          </ul>
+          <div class="tier-condition">Cascade complete after delivery or 48h timeout</div>
+        </div>
+      </div>
+
+      <h3>Timeouts by Priority</h3>
+      <table>
+        <thead><tr><th>Priority</th><th>Tier 1 &rarr; 2</th><th>Tier 2 &rarr; 3</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip blue">Normal</span></td><td>3 hours</td><td>24 hours</td></tr>
+          <tr><td><span class="chip amber">Important</span></td><td>2 hours</td><td>12 hours</td></tr>
+          <tr><td><span class="chip red">Urgent</span></td><td>30 minutes</td><td>6 hours</td></tr>
+        </tbody>
+      </table>
+
+      <!-- STEP 2.1 -->
+      <div class="step-card" id="step-2-1">
+        <h4>Step 2.1 &mdash; Cascade Processor <span class="chip blue">gims-api</span></h4>
+        <p>Console App following the CampaignListener.cs polling pattern.</p>
+
+        <details>
+          <summary>Files to Create</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>File</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td><code>CascadeProcessor/Program.cs</code></td><td>Entry point (new project)</td></tr>
+                <tr><td><code>CascadeProcessor/CascadeWorker.cs</code></td><td>Processing loop</td></tr>
+                <tr><td><code>CascadeProcessor/cascadeprocessor.config.json</code></td><td>Configuration</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>Processing Loop</summary>
+          <div class="details-content">
+            <pre><code>WHILE true:
+  Query messages WHERE cascadeComplete = false
+  FOR each:
+    Tier 1 read? &rarr; DONE (finalChannel = "app")
+    Tier 1 timeout? &rarr; Send WA via bridge-universe endpoint &rarr; Tier 2
+    Tier 2 read? &rarr; DONE
+    Tier 2 timeout + not delivered? &rarr; Send SMS via bridge-universe &rarr; Tier 3
+    Tier 3 delivered or 48h? &rarr; DONE
+  Adaptive sleep: 1 min active, 5 min idle</code></pre>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 2.2 -->
+      <div class="step-card" id="step-2-2">
+        <h4>Step 2.2 &mdash; Tier 1 Notification</h4>
+        <p>Update <code>ReleaseCampaign</code>: after message creation, send "You have a new message" via bridge-universe WA endpoint.</p>
+      </div>
+
+      <!-- STEP 2.3 -->
+      <div class="step-card" id="step-2-3">
+        <h4>Step 2.3 &mdash; Webhook Integration <span class="chip amber">azf-gradesmatch-identity</span></h4>
+        <p>Edit <code>metaWebhook.cs</code>: route GIMS responses (match inbound to unanswered GIMS messages), update delivery status on WA callbacks. No changes to non-GIMS behavior.</p>
+      </div>
+
+      <!-- STEP 2.4 -->
+      <div class="step-card" id="step-2-4">
+        <h4>Step 2.4 &mdash; Console Updates <span class="chip purple">bridge-console</span></h4>
+        <p>Enable multi-channel editors in Wizard Step 3, cascade settings in Step 6, cascade funnel visualization in Campaign Detail.</p>
+      </div>
+
+      <!-- STEP 2.5 -->
+      <div class="step-card" id="step-2-5">
+        <h4>Step 2.5 &mdash; Scheduled Messages</h4>
+        <p>Add to Cascade Processor: poll <code>scheduledFor &lt;= NOW</code> messages and campaigns.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 3 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-3">
+      <h2>7. Phase 3 &mdash; Event Tracking System &amp; Templates</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">03</div>
+        <div class="phase-info">
+          <div class="phase-title">Event Tracking System &amp; Templates</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 3&ndash;4 weeks</span>
+            <span><strong>Repos:</strong> gims-api, bridge-universe, bridge-console</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout vision">
+        <div class="callout-title">Goal</div>
+        <p style="margin-bottom:0;">Business events auto-trigger messages. Configure via bridge-console, no code changes needed.</p>
+      </div>
+
+      <!-- STEP 3.1 -->
+      <div class="step-card" id="step-3-1">
+        <h4>Step 3.1 &mdash; EventPublisher <span class="chip amber">bridge-universe</span></h4>
+        <p><code>Helpers/EventPublisher.cs</code>: static <code>Publish()</code> &rarr; insert into <code>gradesmatch_events.events</code> with <code>processed = false</code>.</p>
+      </div>
+
+      <!-- STEP 3.2 -->
+      <div class="step-card" id="step-3-2">
+        <h4>Step 3.2 &mdash; Instrument 10 Events <span class="chip amber">bridge-universe</span></h4>
+        <p>~5 lines each in ApplicationService, DocumentService, AccountService, EmailService, RegistrationService.</p>
+
+        <details>
+          <summary>Event Catalogue</summary>
+          <div class="details-content">
+            <table>
+              <thead><tr><th>#</th><th>Event</th><th>Source Service</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td><code>application.submitted</code></td><td>ApplicationService</td></tr>
+                <tr><td>2</td><td><code>application.status_changed</code></td><td>ApplicationService</td></tr>
+                <tr><td>3</td><td><code>application.offer_received</code></td><td>ApplicationService</td></tr>
+                <tr><td>4</td><td><code>document.uploaded</code></td><td>DocumentService</td></tr>
+                <tr><td>5</td><td><code>document.requested</code></td><td>DocumentService</td></tr>
+                <tr><td>6</td><td><code>onboarding.completed</code></td><td>AccountService</td></tr>
+                <tr><td>7</td><td><code>gradesmail.received</code></td><td>EmailService</td></tr>
+                <tr><td>8</td><td><code>registration.completed</code></td><td>RegistrationService</td></tr>
+                <tr><td>9</td><td><code>user.created</code></td><td>AccountService</td></tr>
+                <tr><td>10</td><td><code>user.inactive</code></td><td>AccountService</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 3.3 -->
+      <div class="step-card" id="step-3-3">
+        <h4>Step 3.3 &mdash; Event Processor <span class="chip blue">gims-api</span></h4>
+        <p>Second loop in Cascade Processor: poll unprocessed events &rarr; match templates &rarr; resolve placeholders &rarr; create messages (immediate or delayed).</p>
+      </div>
+
+      <!-- STEP 3.4 -->
+      <div class="step-card" id="step-3-4">
+        <h4>Step 3.4 &mdash; EventTemplate &amp; MessageTemplate CRUD <span class="chip blue">gims-api</span></h4>
+        <p>Models + GimsService methods for create, update, delete, get, toggle, test.</p>
+      </div>
+
+      <!-- STEP 3.5 -->
+      <div class="step-card" id="step-3-5">
+        <h4>Step 3.5 &mdash; Events &amp; Templates Tabs <span class="chip purple">bridge-console</span></h4>
+        <p>Activate tabs. Event template list + CRUD form. Template library + CRUD. Wizard Event-based type support.</p>
+      </div>
+
+      <!-- STEP 3.6 -->
+      <div class="step-card" id="step-3-6">
+        <h4>Step 3.6 &mdash; Placeholder Resolution Engine <span class="chip blue">gims-api</span></h4>
+        <p><code>Helpers/PlaceholderResolver.cs</code>: resolve from event data &rarr; student profile &rarr; partner &rarr; system. Flag unresolved.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 4 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-4">
+      <h2>8. Phase 4 &mdash; Unified Chatbot &amp; Analytics</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">04</div>
+        <div class="phase-info">
+          <div class="phase-title">Unified Chatbot &amp; Analytics</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 4&ndash;6 weeks</span>
+            <span><strong>Repos:</strong> gims-api, bridge-console, all student apps</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout vision">
+        <div class="callout-title">Goal</div>
+        <p style="margin-bottom:0;">Single chatbot replaces 4 fragmented bots. Analytics dashboard provides visibility into all messaging.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 4.1 &mdash; Chatbot Models <span class="chip blue">gims-api</span></h4>
+        <p><code>Models/Conversation.cs</code>, <code>Models/FAQ.cs</code></p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 4.2 &mdash; 2-Hit LLM Chat <span class="chip blue">gims-api</span></h4>
+        <p><code>Services/GimsChatService.cs</code>: Chat (2-hit LLM), GetConversationHistory, GetConversations, EscalateToSupport.</p>
+
+        <div class="callout info">
+          <div class="callout-title">Chat Flow</div>
+          <p style="margin-bottom:0;">Context assembly &rarr; <strong>Hit 1</strong> (GPT-4o-mini classify) &rarr; optional context fetch (11 bounded sources) &rarr; <strong>Hit 2</strong> (GPT-4o respond) &rarr; store with sentiment/resolution tags.</p>
+        </div>
+
+        <div class="callout warn">
+          <div class="callout-title">Escalation Rules</div>
+          <p style="margin-bottom:0;">3+ unresolved turns, frustrated sentiment, explicit request &rarr; support ticket.</p>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 4.3 &mdash; Chat UI <span class="chip green">all student apps</span></h4>
+        <p>Chat interface, "Have questions?" button on campaigns, conversation list.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 4.4 &mdash; Analytics Dashboard <span class="chip purple">bridge-console</span></h4>
+        <p>Activate Analytics tab: channel distribution pie, engagement trends, cascade funnel, response rates, top campaigns. MongoDB aggregation pipelines.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 4.5 &mdash; FAQ &amp; Student Profile Tab <span class="chip purple">bridge-console</span></h4>
+        <p>Settings &gt; FAQ Library. Student Profile &gt; Messages tab with delivery timeline + quick-send.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 5 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-5">
+      <h2>9. Phase 5 &mdash; Consolidation &amp; Legacy Retirement</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">05</div>
+        <div class="phase-info">
+          <div class="phase-title">Consolidation &amp; Legacy Retirement</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 2&ndash;3 weeks</span>
+            <span><strong>Repos:</strong> bridge-console, bridge-universe, gims-api, azf-gradesmatch-identity</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout vision">
+        <div class="callout-title">Goal</div>
+        <p style="margin-bottom:0;">Retire legacy system. No data migration &mdash; legacy data stays in place.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 5.1 &mdash; Legacy Campaign Page Read-Only</h4>
+        <p>Add deprecation banner to <code>CampaignPage.tsx</code>. Disable creation. Legacy data stays in <code>gradesmatch_social.whatsapp_campaign</code> untouched.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 5.2 &mdash; WhatsApp Redirect</h4>
+        <p>Non-response WA messages &rarr; "Chat with us on the app: <em>{link}</em>"</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 5.3 &mdash; Replace Timer Triggers</h4>
+        <p>One at a time: application follow-up, document reminder, inactivity nudge, birthday, signup follow-up.</p>
+      </div>
+
+      <div class="step-card">
+        <h4>Step 5.4 &mdash; Direct Message &amp; Settings</h4>
+        <p><code>SendDirectMessage</code> API. GIMS Settings page (cascade timeouts, notification templates, feature toggles).</p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PHASE 6 -->
+    <!-- ============================================================ -->
+    <div class="section" id="phase-6">
+      <h2>10. Phase 6 &mdash; IDEAL State (Future)</h2>
+
+      <div class="phase-header">
+        <div class="phase-num">06</div>
+        <div class="phase-info">
+          <div class="phase-title">IDEAL State &mdash; Future Enhancements</div>
+          <div class="phase-meta">
+            <span><strong>Duration:</strong> 6&ndash;8 weeks</span>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Item</th><th>Size</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td>FCM Integration</td><td><span class="chip amber">L</span></td><td>Android native push for Tier 1</td></tr>
+          <tr><td>APNS Integration</td><td><span class="chip amber">L</span></td><td>iOS native push</td></tr>
+          <tr><td>Azure Durable Functions</td><td><span class="chip red">XL</span></td><td>Replace polling with per-message orchestrations</td></tr>
+          <tr><td>Azure Service Bus</td><td><span class="chip amber">L</span></td><td>Real-time event processing (&lt; 1s)</td></tr>
+          <tr><td>Native App Comms</td><td><span class="chip red">XL</span></td><td>Full native inbox in Gradesmatch ID</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 11: CROSS-CUTTING -->
+    <!-- ============================================================ -->
+    <div class="section" id="cross-cutting">
+      <h2>11. Cross-Cutting Concerns</h2>
+
+      <h3>Monitoring</h3>
+      <ul>
+        <li>Errors via <code>ExceptionMiddleware</code> &rarr; <code>error_log</code></li>
+        <li>Cascade Processor health endpoint</li>
+        <li>Alerts: processor down &gt; 10 min, high failure rates, LLM timeouts</li>
+      </ul>
+
+      <h3>Security</h3>
+      <ul>
+        <li>Student endpoints filtered by JWT userId</li>
+        <li>Admin endpoints workspace-scoped + role-checked</li>
+        <li>LLM: no raw credentials, context sanitized server-side</li>
+        <li>Files: Azure Blob with SAS tokens</li>
+      </ul>
+
+      <h3>Testing</h3>
+      <ul>
+        <li>Campaign test-send (Phase 1), event template test (Phase 3), chatbot via API (Phase 4)</li>
+      </ul>
+
+      <h3>Deployment</h3>
+      <ul>
+        <li>gims-api: independent Azure Function App</li>
+        <li>Cascade Processor: Azure Container Instance / App Service</li>
+        <li>Feature flags: <code>GIMS_ENABLED</code> per workspace</li>
+      </ul>
+
+      <h3>Scale</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Current</th><th>With GIMS</th><th>Strategy</th></tr></thead>
+        <tbody>
+          <tr><td>Messages/day</td><td>~5,000</td><td>~50,000</td><td>Indexes, batching</td></tr>
+          <tr><td>Cascade checks/min</td><td>N/A</td><td>~10,000</td><td>Indexed queries, adaptive polling</td></tr>
+          <tr><td>Chatbot/day</td><td>~500</td><td>~5,000</td><td>FAQ caching, Hit 1 resolution &gt; 60%</td></tr>
+          <tr><td>Events/day</td><td>N/A</td><td>~20,000</td><td>TTL 90 days, batching</td></tr>
+          <tr><td>LLM cost/month</td><td>~$50</td><td>~$500&ndash;1,500</td><td>GPT-4o-mini Hit 1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 12: TIMELINE -->
+    <!-- ============================================================ -->
+    <div class="section" id="timeline">
+      <h2>12. Timeline Summary</h2>
+
+      <table>
+        <thead><tr><th>Phase</th><th>Duration</th><th>Cumulative</th><th>What Ships</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>1: Core Foundation</strong></td>
+            <td>4&ndash;6 weeks</td>
+            <td>4&ndash;6 weeks</td>
+            <td>Campaign CRUD + student inbox in ALL apps + response collection</td>
+          </tr>
+          <tr>
+            <td><strong>2: Delivery Cascade</strong></td>
+            <td>3&ndash;4 weeks</td>
+            <td>7&ndash;10 weeks</td>
+            <td>App &rarr; WA &rarr; SMS cascade + delivery tracking + WA response parsing</td>
+          </tr>
+          <tr>
+            <td><strong>3: Event System</strong></td>
+            <td>3&ndash;4 weeks</td>
+            <td>10&ndash;14 weeks</td>
+            <td>Auto event messaging + template library + event catalogue</td>
+          </tr>
+          <tr>
+            <td><strong>4: Chatbot + Analytics</strong></td>
+            <td>4&ndash;6 weeks</td>
+            <td>14&ndash;20 weeks</td>
+            <td>Unified AI chatbot + analytics dashboard + FAQ management</td>
+          </tr>
+          <tr>
+            <td><strong>5: Consolidation</strong></td>
+            <td>2&ndash;3 weeks</td>
+            <td>16&ndash;23 weeks</td>
+            <td>Legacy read-only (no migration) + direct messaging + settings</td>
+          </tr>
+          <tr>
+            <td><strong>6: IDEAL</strong></td>
+            <td>6&ndash;8 weeks</td>
+            <td>22&ndash;31 weeks</td>
+            <td>Native push + durable functions + real-time events</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <div class="callout-title">Total: 16&ndash;23 weeks for Phases 1&ndash;5 (production-ready unified messaging)</div>
+        <p style="margin-bottom:0;">Phase 6 is longer-term toward zero WhatsApp dependency.</p>
+      </div>
+
+      <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--gray-200);">
+
+      <p style="text-align:center; color:var(--gray-500); font-size:.85rem;">
+        <strong>GIMS</strong> &mdash; Gradesmatch Integrated Messaging System<br>
+        Implementation Plan v2.0 &mdash; April 2026 &mdash; Confidential
+      </p>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Scroll spy for sidebar -->
+<script>
+(function(){
+  var links = document.querySelectorAll('.sidebar nav a');
+  var sections = [];
+  links.forEach(function(a){
+    var id = a.getAttribute('href');
+    if(id && id.startsWith('#')){
+      var el = document.querySelector(id);
+      if(el) sections.push({el:el, link:a});
+    }
+  });
+  function onScroll(){
+    var scrollPos = window.scrollY + 80;
+    var current = null;
+    for(var i=sections.length-1; i>=0; i--){
+      if(sections[i].el.offsetTop <= scrollPos){
+        current = sections[i]; break;
+      }
+    }
+    links.forEach(function(a){ a.classList.remove('active'); });
+    if(current) current.link.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
